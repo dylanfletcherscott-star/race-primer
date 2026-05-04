@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+<!-- PWA / Home Screen Meta Tags -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Race Primer">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#020b16">
+<link rel="manifest" href="primer.webmanifest">
+
+<!-- Apple Touch Icon (embedded SVG → PNG fallback) -->
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='38' fill='%230A1628'/%3E%3Crect x='0' y='0' width='14' height='192' rx='4' fill='%23CC0000'/%3E%3Ctext x='108' y='128' font-family='Arial Black,sans-serif' font-size='82' font-weight='900' font-style='italic' text-anchor='middle' fill='white'%3EDF%3C/text%3E%3Crect x='14' y='158' width='178' height='10' fill='%23CC0000'/%3E%3C/svg%3E">
+
+<title>Dylan Fletcher — Race Day Primer</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,900;1,700;1,900&family=Barlow:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html {
+    height: 100%;
+    /* Fills status bar area on notched iPhones in standalone mode */
+    background: #020b16;
+  }
+
+  body {
+    width: 100%;
+    height: 100dvh; /* dynamic viewport height — best for mobile */
+    background: #020b16;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow: hidden;
+    font-family: 'Barlow', sans-serif;
+    /* Safe area padding for notches/home bars */
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  /* ── App shell ─────────────────────────────────── */
+  .app {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 430px;
+    height: 100%;
+    position: relative;
+  }
+
+  /* ── Card deck ─────────────────────────────────── */
+  .deck {
+    position: relative;
+    flex: 1;
+    width: 100%;
+    overflow: hidden;
+    /* rounded corners on tablet/desktop only */
+  }
+
+  .card {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.75);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(55px) scale(0.97);
+    transition: opacity 0.38s cubic-bezier(0.4,0,0.2,1),
+                transform 0.38s cubic-bezier(0.4,0,0.2,1);
+    will-change: transform, opacity;
+  }
+  .card.active { opacity: 1; pointer-events: all; transform: none; }
+  .card.exit-left { opacity: 0; transform: translateX(-55px) scale(0.97); transition: opacity 0.28s ease, transform 0.28s ease; }
+
+  /* ── Background & overlay ──────────────────────── */
+  .bg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .card-overlay { position: absolute; inset: 0; }
+
+  /* ── Card content ──────────────────────────────── */
+  .card-content {
+    position: relative;
+    z-index: 5;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: clamp(24px, 5vh, 40px) clamp(22px, 6vw, 32px) clamp(16px, 3vh, 28px);
+    color: white;
+  }
+
+  /* ── Typography ────────────────────────────────── */
+  .tag {
+    font-size: clamp(9px, 2.2vw, 10px);
+    font-weight: 700; letter-spacing: 3px;
+    text-transform: uppercase; opacity: 0.55;
+    margin-bottom: 6px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .tag-line { width: 18px; height: 1.5px; background: currentColor; opacity: 0.7; flex-shrink: 0; }
+
+  h1 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: clamp(52px, 16vw, 72px);
+    font-weight: 900; font-style: italic;
+    line-height: 0.85; text-transform: uppercase;
+  }
+  h2 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: clamp(40px, 12vw, 54px);
+    font-weight: 900; font-style: italic;
+    line-height: 0.88; text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .accent { height: 3px; border-radius: 2px; width: 40px; margin: 10px 0; }
+
+  /* ── List items ────────────────────────────────── */
+  .items { display: flex; flex-direction: column; }
+  .item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: clamp(7px, 1.5vh, 10px) 0;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+  }
+  .item:last-child { border-bottom: none; }
+  .dot-m { width: 5px; height: 5px; border-radius: 50%; margin-top: 7px; flex-shrink: 0; }
+  .item-body { display: flex; flex-direction: column; gap: 1px; }
+  .item-strong { font-size: clamp(12px, 3.2vw, 13.5px); font-weight: 700; }
+  .item-sub { font-size: clamp(11px, 3vw, 12.5px); opacity: 0.65; line-height: 1.4; }
+  .item-only { font-size: clamp(12px, 3.2vw, 13.5px); line-height: 1.45; opacity: 0.9; }
+
+  /* ── Coaching / info boxes ─────────────────────── */
+  .cbox {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px;
+    padding: clamp(10px, 2vh, 14px) 14px;
+    margin-top: clamp(8px, 1.5vh, 12px);
+  }
+  .cbox-label { font-size: 9px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; opacity: 0.4; margin-bottom: 4px; }
+  .cbox-text { font-size: clamp(12px, 3vw, 13px); font-style: italic; opacity: 0.85; line-height: 1.5; }
+
+  /* ── Pressure fix cards ────────────────────────── */
+  .fix-row { display: flex; gap: 7px; margin-top: clamp(8px, 1.5vh, 12px); }
+  .fix-card {
+    flex: 1; border-radius: 12px;
+    padding: clamp(8px, 1.8vh, 11px) 10px;
+    display: flex; flex-direction: column; gap: 4px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.06);
+  }
+  .fix-num { font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 900; line-height: 1; }
+  .fix-title { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; opacity: 0.7; }
+  .fix-body { font-size: clamp(10.5px, 2.8vw, 11.5px); line-height: 1.4; opacity: 0.8; }
+
+  /* ── Stat pills ────────────────────────────────── */
+  .pill-row { display: flex; gap: 8px; margin-top: clamp(10px, 2vh, 14px); }
+  .pill {
+    flex: 1; background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px; padding: clamp(9px, 2vh, 12px);
+  }
+  .pill-label { font-size: 9px; letter-spacing: 2px; opacity: 0.45; text-transform: uppercase; margin-bottom: 3px; }
+  .pill-val { font-family: 'Barlow Condensed', sans-serif; font-size: clamp(18px, 5vw, 22px); font-weight: 700; }
+
+  .spacer { flex: 1; }
+  .section-label { font-size: 9px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; opacity: 0.45; margin-bottom: 5px; margin-top: clamp(10px, 2vh, 14px); }
+  .btag { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; opacity: 0.2; margin-top: auto; text-align: right; }
+  .voice-box { background: rgba(0,0,0,0.3); border-left: 3px solid #FFD700; border-radius: 0 10px 10px 0; padding: 11px 14px; margin: 8px 0; }
+  .voice-text { font-size: clamp(15px, 4.5vw, 18px); font-family: 'Barlow Condensed', sans-serif; font-style: italic; font-weight: 700; opacity: 0.9; }
+  .voice-small { font-size: 10px; opacity: 0.5; margin-top: 2px; }
+
+  /* ── Bottom nav ────────────────────────────────── */
+  .nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: clamp(10px, 2vh, 14px) clamp(14px, 4vw, 20px);
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), clamp(12px, 2.5vh, 18px));
+    background: rgba(2,11,22,0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    flex-shrink: 0;
+  }
+  .dots { display: flex; align-items: center; gap: 5px; }
+  .dot-nav {
+    height: 5px; width: 5px; border-radius: 3px;
+    background: rgba(255,255,255,0.2);
+    cursor: pointer; transition: all 0.3s ease;
+  }
+  .dot-nav.active { width: 24px; background: white; }
+  .nav-btns { display: flex; gap: 8px; }
+  .nbtn {
+    width: clamp(38px, 10vw, 44px);
+    height: clamp(38px, 10vw, 44px);
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.13);
+    background: rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.65);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 17px;
+    transition: all 0.2s; user-select: none;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    -webkit-touch-callout: none;
+  }
+  .nbtn:hover { background: rgba(255,255,255,0.13); color: white; }
+  .nbtn:active { transform: scale(0.88); background: rgba(255,255,255,0.18); }
+
+  /* ── Desktop overrides (centred card look) ─────── */
+  @media (min-width: 500px) and (min-height: 820px) {
+    body { justify-content: center; padding-top: 0; }
+    .app { height: auto; gap: 16px; width: auto; }
+    .deck { flex: none; width: 375px; height: 700px; border-radius: 26px; }
+    .card { border-radius: 26px; box-shadow: 0 30px 80px rgba(0,0,0,0.75), 0 0 0 1px rgba(255,255,255,0.07); }
+    .nav { width: 375px; background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; padding-bottom: 0; border-radius: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="deck" id="deck">
+
+    <!-- ═══ CARD 1 — IDENTITY ═══ -->
+    <div class="card active" data-index="0">
+      <svg class="bg" viewBox="0 0 375 700" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="sky1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#020a16"/><stop offset="55%" stop-color="#071a35"/><stop offset="100%" stop-color="#0d2a50"/></linearGradient>
+          <linearGradient id="water1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#061428"/><stop offset="100%" stop-color="#030c18"/></linearGradient>
+          <radialGradient id="glow1" cx="0" cy="1" r="1"><stop offset="0%" stop-color="#CC1122" stop-opacity="0.45"/><stop offset="60%" stop-color="#FF4400" stop-opacity="0.12"/><stop offset="100%" stop-color="#FF4400" stop-opacity="0"/></radialGradient>
+        </defs>
+        <rect width="375" height="700" fill="url(#sky1)"/>
+        <ellipse cx="30" cy="700" rx="320" ry="280" fill="url(#glow1)"/>
+        <circle cx="45" cy="55" r="1.2" fill="white" opacity="0.7"/><circle cx="108" cy="28" r="0.9" fill="white" opacity="0.55"/><circle cx="175" cy="48" r="1.5" fill="white" opacity="0.65"/><circle cx="228" cy="18" r="0.8" fill="white" opacity="0.8"/><circle cx="295" cy="42" r="1.2" fill="white" opacity="0.5"/><circle cx="348" cy="72" r="0.9" fill="white" opacity="0.7"/><circle cx="82" cy="105" r="0.8" fill="white" opacity="0.4"/><circle cx="315" cy="95" r="1.0" fill="white" opacity="0.6"/><circle cx="250" cy="80" r="0.8" fill="white" opacity="0.5"/>
+        <rect x="0" y="540" width="375" height="160" fill="url(#water1)"/>
+        <line x1="0" y1="540" x2="375" y2="540" stroke="rgba(255,255,255,0.13)" stroke-width="1.5"/>
+        <line x1="0" y1="558" x2="375" y2="558" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        <!-- F50 foiling catamaran -->
+        <path d="M 78 462 Q 100 454 195 454 Q 290 454 318 462 Q 305 472 195 473 Q 90 474 78 465 Z" fill="#CC0000"/>
+        <path d="M 83 457 Q 195 450 313 457" stroke="rgba(255,180,180,0.25)" stroke-width="1" fill="none"/>
+        <path d="M 108 440 Q 130 433 215 433 Q 298 433 323 440 Q 312 449 215 450 Q 128 451 108 443 Z" fill="#CC0000" opacity="0.75"/>
+        <rect x="88" y="447" width="234" height="7" rx="3.5" fill="#cdd3e0"/>
+        <rect x="102" y="431" width="206" height="5.5" rx="2.5" fill="#bdc4d2"/>
+        <path d="M 92 433 L 310 433 L 302 461 L 99 461 Z" fill="none" stroke="rgba(180,195,215,0.18)" stroke-width="1" stroke-dasharray="5,4"/>
+        <line x1="200" y1="195" x2="197" y2="447" stroke="rgba(255,255,255,0.9)" stroke-width="3" stroke-linecap="round"/>
+        <path d="M 198 198 Q 175 290 162 390 L 160 450 L 197 450 Z" fill="#CC0000" opacity="0.97"/>
+        <path d="M 198 198 Q 175 290 162 390 L 160 450" stroke="rgba(255,160,160,0.4)" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        <path d="M 200 198 Q 225 280 232 375 L 235 450 L 197 450 Z" fill="white" opacity="0.1"/>
+        <ellipse cx="199" cy="197" rx="5" ry="7" fill="white" opacity="0.5"/>
+        <line x1="112" y1="471" x2="102" y2="541" stroke="#8a96aa" stroke-width="3" stroke-linecap="round"/>
+        <line x1="292" y1="471" x2="305" y2="541" stroke="#8a96aa" stroke-width="3" stroke-linecap="round"/>
+        <line x1="68" y1="540" x2="145" y2="542" stroke="#aab5c8" stroke-width="4.5" stroke-linecap="round"/>
+        <line x1="260" y1="540" x2="340" y2="542" stroke="#aab5c8" stroke-width="4.5" stroke-linecap="round"/>
+        <path d="M 80 467 Q 55 476 35 468 Q 22 462 28 454" stroke="rgba(255,255,255,0.5)" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <path d="M 78 472 Q 50 484 25 476" stroke="rgba(255,255,255,0.28)" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        <path d="M 76 477 Q 46 491 20 482" stroke="rgba(255,255,255,0.14)" stroke-width="1" fill="none" stroke-linecap="round"/>
+        <path d="M 80 543 Q 195 552 318 543" stroke="rgba(200,0,0,0.25)" stroke-width="2" fill="none"/>
+        <rect x="0" y="0" width="4" height="700" fill="#CC0000" opacity="0.85"/>
+        <rect x="0" y="280" width="4" height="60" fill="#FFD700" opacity="0.95"/>
+      </svg>
+      <div class="card-overlay" style="background:linear-gradient(to bottom,rgba(2,10,22,0.15) 0%,rgba(2,10,22,0.55) 55%,rgba(2,10,22,0.9) 100%)"></div>
+      <div class="card-content">
+        <div class="tag"><span class="tag-line"></span>MiiSpotlight — Performance Profile</div>
+        <div class="spacer"></div>
+        <div>
+          <div style="display:inline-flex;align-items:center;gap:7px;background:rgba(204,0,0,0.18);border:1px solid rgba(204,0,0,0.4);padding:5px 13px;border-radius:20px;margin-bottom:16px;">
+            <div style="width:7px;height:7px;border-radius:50%;background:#CC0000;flex-shrink:0;"></div>
+            <span style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;">Lead Performance Preference</span>
+          </div>
+          <h1>DYLAN<br>FLETCHER</h1>
+          <div class="accent" style="background:#CC0000;"></div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:clamp(22px,7vw,30px);font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#FFD700;margin-bottom:8px;">Forcefully Optimistic</div>
+          <div style="font-size:clamp(12px,3.2vw,14px);opacity:0.62;line-height:1.6;">Decisive. Determined. Contagiously confident.<br>Built to find a way to win.</div>
+          <div class="pill-row">
+            <div class="pill"><div class="pill-label">Mindset</div><div class="pill-val" style="color:#FF6B35;">Optimistic</div></div>
+            <div class="pill"><div class="pill-label">Style</div><div class="pill-val" style="color:#CC0000;">Forceful</div></div>
+          </div>
+        </div>
+        <div class="btag" style="margin-top:12px;">Emirates GBR · SailGP F50 · AC40</div>
+      </div>
+    </div>
+
+    <!-- ═══ CARD 2 — STRENGTHS ═══ -->
+    <div class="card" data-index="1">
+      <svg class="bg" viewBox="0 0 375 700" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+        <defs><linearGradient id="bg2" x1="0" y1="0" x2="0.6" y2="1"><stop offset="0%" stop-color="#0d0d1c"/><stop offset="100%" stop-color="#08121e"/></linearGradient></defs>
+        <rect width="375" height="700" fill="url(#bg2)"/>
+        <line x1="-30" y1="180" x2="430" y2="-20" stroke="rgba(204,0,0,0.07)" stroke-width="70"/>
+        <line x1="-30" y1="330" x2="430" y2="130" stroke="rgba(204,0,0,0.05)" stroke-width="50"/>
+        <line x1="-30" y1="520" x2="430" y2="320" stroke="rgba(255,107,53,0.04)" stroke-width="90"/>
+        <rect x="0" y="0" width="5" height="700" fill="#CC0000" opacity="0.9"/>
+        <rect x="0" y="95" width="5" height="70" fill="#FFD700" opacity="1"/>
+        <text x="280" y="680" font-family="Arial Black,sans-serif" font-size="200" fill="rgba(255,255,255,0.018)" font-weight="900">1</text>
+      </svg>
+      <div class="card-overlay" style="background:rgba(10,12,22,0.52)"></div>
+      <div class="card-content">
+        <div class="tag" style="color:#CC0000;opacity:1;"><span class="tag-line"></span>01 — Maximise</div>
+        <h2>YOUR<br>STRENGTHS</h2>
+        <div class="accent" style="background:#CC0000;"></div>
+        <div style="font-size:11px;opacity:0.5;margin-bottom:10px;font-style:italic;">Sweet spot — your superpowers</div>
+        <div class="items">
+          <div class="item"><div class="dot-m" style="background:#CC0000;margin-top:8px;"></div><div class="item-body"><span class="item-strong">Resolute &amp; Relentless</span><span class="item-sub">Never abandons vision or ambition — stays the course when others fold</span></div></div>
+          <div class="item"><div class="dot-m" style="background:#CC0000;margin-top:8px;"></div><div class="item-body"><span class="item-strong">Marginal Gains Mindset</span><span class="item-sub">Always finds a way to win through the pursuit of small, compounding edges</span></div></div>
+          <div class="item"><div class="dot-m" style="background:#FF6B35;margin-top:8px;"></div><div class="item-body"><span class="item-strong">Contagious Optimism</span><span class="item-sub">Confident, upbeat — your energy visibly lifts the team around you</span></div></div>
+          <div class="item"><div class="dot-m" style="background:#FF6B35;margin-top:8px;"></div><div class="item-body"><span class="item-strong">Decisive &amp; Action-Oriented</span><span class="item-sub">Clear on goals, clear on the plan — cuts through and executes</span></div></div>
+          <div class="item"><div class="dot-m" style="background:#FFD700;margin-top:8px;"></div><div class="item-body"><span class="item-strong">Courageous Risk-Taker</span><span class="item-sub">Takes calculated risks others won't — backed by grounded self-belief</span></div></div>
+          <div class="item"><div class="dot-m" style="background:#FFD700;margin-top:8px;"></div><div class="item-body"><span class="item-strong">Clarity &amp; High Standards</span><span class="item-sub">Prefers sharp clarity — won't shy away from enforcing what matters</span></div></div>
+        </div>
+        <div class="cbox"><div class="cbox-label">Morning question</div><div class="cbox-text">"How do I play to these strengths even more today?"</div></div>
+      </div>
+    </div>
+
+    <!-- ═══ CARD 3 — DRIVERS ═══ -->
+    <div class="card" data-index="2">
+      <svg class="bg" viewBox="0 0 375 700" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="sky3" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#020c1a"/><stop offset="50%" stop-color="#061828"/><stop offset="100%" stop-color="#0a2240"/></linearGradient>
+          <linearGradient id="water3" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#051220"/><stop offset="100%" stop-color="#020810"/></linearGradient>
+          <radialGradient id="glow3" cx="0.85" cy="0.2" r="0.5"><stop offset="0%" stop-color="#FFD700" stop-opacity="0.18"/><stop offset="100%" stop-color="#FFD700" stop-opacity="0"/></radialGradient>
+        </defs>
+        <rect width="375" height="700" fill="url(#sky3)"/>
+        <ellipse cx="375" cy="120" rx="260" ry="200" fill="url(#glow3)"/>
+        <circle cx="40" cy="70" r="1.2" fill="white" opacity="0.7"/><circle cx="95" cy="38" r="0.8" fill="white" opacity="0.6"/><circle cx="155" cy="55" r="1.4" fill="white" opacity="0.55"/><circle cx="210" cy="22" r="0.9" fill="white" opacity="0.8"/><circle cx="268" cy="48" r="1.0" fill="white" opacity="0.5"/><circle cx="330" cy="30" r="0.8" fill="white" opacity="0.65"/>
+        <rect x="0" y="520" width="375" height="180" fill="url(#water3)"/>
+        <line x1="0" y1="520" x2="375" y2="520" stroke="rgba(255,255,255,0.1)" stroke-width="1.5"/>
+        <!-- AC40 hull -->
+        <path d="M 155 495 Q 180 482 240 480 Q 305 478 335 490 Q 325 510 240 512 Q 175 514 155 500 Z" fill="#003087"/>
+        <path d="M 160 490 Q 240 481 330 490" stroke="rgba(100,150,255,0.3)" stroke-width="1.5" fill="none"/>
+        <path d="M 160 503 Q 240 501 328 503" stroke="#CC0000" stroke-width="3" fill="none" opacity="0.9"/>
+        <path d="M 158 507 Q 240 506 330 507" stroke="white" stroke-width="1.5" fill="none" opacity="0.5"/>
+        <line x1="240" y1="510" x2="242" y2="522" stroke="#002060" stroke-width="4" stroke-linecap="round"/>
+        <line x1="232" y1="175" x2="228" y2="490" stroke="rgba(255,255,255,0.85)" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M 230 178 Q 210 280 190 380 L 185 490 L 228 490 Z" fill="#CC0000" opacity="0.9"/>
+        <path d="M 230 178 Q 248 270 258 370 L 262 490 L 228 490 Z" fill="#001840" opacity="0.7"/>
+        <path d="M 228 280 Q 195 340 175 440 L 195 490 L 228 490 Z" fill="white" opacity="0.12"/>
+        <line x1="185" y1="490" x2="300" y2="490" stroke="rgba(200,210,230,0.5)" stroke-width="2" stroke-linecap="round"/>
+        <text x="193" y="402" font-family="Arial Black,sans-serif" font-size="18" fill="white" font-weight="900" opacity="0.55" transform="rotate(-2,193,402)">GB1</text>
+        <line x1="200" y1="512" x2="192" y2="521" stroke="#6a7890" stroke-width="3" stroke-linecap="round"/>
+        <line x1="165" y1="520" x2="220" y2="522" stroke="#8090a8" stroke-width="3.5" stroke-linecap="round"/>
+        <path d="M 157 498 Q 132 508 112 500 Q 100 494 105 486" stroke="rgba(255,255,255,0.45)" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+        <path d="M 155 503 Q 128 515 105 506" stroke="rgba(255,255,255,0.22)" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+        <path d="M 160 522 Q 240 530 330 522" stroke="rgba(0,48,135,0.4)" stroke-width="2" fill="none"/>
+        <rect x="0" y="0" width="4" height="700" fill="#003087" opacity="0.9"/>
+        <rect x="0" y="200" width="4" height="50" fill="#FFD700" opacity="1"/>
+        <rect x="0" y="0" width="375" height="3" fill="#FFD700" opacity="0.6"/>
+      </svg>
+      <div class="card-overlay" style="background:linear-gradient(to bottom,rgba(2,8,20,0.2) 0%,rgba(2,8,20,0.6) 55%,rgba(2,8,20,0.9) 100%)"></div>
+      <div class="card-content">
+        <div class="tag" style="color:#FFD700;opacity:1;"><span class="tag-line"></span>03 — Perform</div>
+        <div class="spacer"></div>
+        <h2>WHAT<br>FIRES<br>YOU UP</h2>
+        <div class="accent" style="background:#FFD700;"></div>
+        <div style="font-size:11px;opacity:0.5;margin-bottom:8px;font-style:italic;">Tap into these to prime your motivation</div>
+        <div class="items">
+          <div class="item"><div style="font-size:15px;flex-shrink:0;margin-top:1px;">⚡</div><span class="item-only">Setting high expectations — then <strong>smashing</strong> them</span></div>
+          <div class="item"><div style="font-size:15px;flex-shrink:0;margin-top:1px;">⚡</div><span class="item-only">Taking bold action and <strong>adapting on the fly</strong></span></div>
+          <div class="item"><div style="font-size:15px;flex-shrink:0;margin-top:1px;">⚡</div><span class="item-only">Exploring new avenues others <strong>haven't tried yet</strong></span></div>
+          <div class="item"><div style="font-size:15px;flex-shrink:0;margin-top:1px;">⚡</div><span class="item-only">Getting straight into the <strong>hard technical details</strong></span></div>
+          <div class="item"><div style="font-size:15px;flex-shrink:0;margin-top:1px;">⚡</div><span class="item-only">Others seeing your <strong>calm under pressure</strong></span></div>
+          <div class="item"><div style="font-size:15px;flex-shrink:0;margin-top:1px;">⚡</div><span class="item-only">Strategically <strong>driving forward</strong> toward ambitious goals</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ CARD 4 — TAKE CARE ═══ -->
+    <div class="card" data-index="3">
+      <svg class="bg" viewBox="0 0 375 700" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+        <defs><linearGradient id="bg4" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#100a00"/><stop offset="100%" stop-color="#0c1008"/></linearGradient></defs>
+        <rect width="375" height="700" fill="url(#bg4)"/>
+        <line x1="-20" y1="100" x2="420" y2="-80" stroke="rgba(255,140,0,0.06)" stroke-width="80"/>
+        <line x1="-20" y1="350" x2="420" y2="170" stroke="rgba(255,100,0,0.045)" stroke-width="60"/>
+        <line x1="-20" y1="580" x2="420" y2="400" stroke="rgba(255,140,0,0.035)" stroke-width="100"/>
+        <polygon points="280,60 340,160 220,160" fill="none" stroke="rgba(255,140,0,0.12)" stroke-width="2"/>
+        <text x="275" y="142" font-family="Arial,sans-serif" font-size="40" fill="rgba(255,140,0,0.15)" font-weight="700">!</text>
+        <rect x="0" y="0" width="4" height="700" fill="#FF6B00" opacity="0.9"/>
+        <text x="240" y="680" font-family="Arial Black,sans-serif" font-size="160" fill="rgba(255,255,255,0.015)" font-weight="900">!</text>
+      </svg>
+      <div class="card-overlay" style="background:rgba(12,8,0,0.55)"></div>
+      <div class="card-content">
+        <div class="tag" style="color:#FF8C00;opacity:1;"><span class="tag-line"></span>01 — Maximise · Take Care</div>
+        <h2>WATCH<br>YOURSELF</h2>
+        <div class="accent" style="background:#FF6B00;"></div>
+        <div style="font-size:11px;opacity:0.5;margin-bottom:8px;font-style:italic;">Strengths become weaknesses when over-played</div>
+        <div class="items">
+          <div class="item"><div style="width:20px;height:20px;border-radius:50%;border:1.5px solid rgba(255,107,0,0.6);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;font-size:10px;color:#FF8C00;">!</div><span class="item-only">Going <strong>overly task-focused</strong> and missing the human factors</span></div>
+          <div class="item"><div style="width:20px;height:20px;border-radius:50%;border:1.5px solid rgba(255,107,0,0.6);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;font-size:10px;color:#FF8C00;">!</div><span class="item-only">Convincing yourself it'll go smoothly <strong>without checking the risks</strong></span></div>
+          <div class="item"><div style="width:20px;height:20px;border-radius:50%;border:1.5px solid rgba(255,107,0,0.6);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;font-size:10px;color:#FF8C00;">!</div><span class="item-only">Appearing <strong>too inflexible</strong> — quick to dismiss other perspectives</span></div>
+          <div class="item"><div style="width:20px;height:20px;border-radius:50%;border:1.5px solid rgba(255,107,0,0.6);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;font-size:10px;color:#FF8C00;">!</div><span class="item-only">Being <strong>unwilling to engage</strong> with the downsides and doubts</span></div>
+          <div class="item"><div style="width:20px;height:20px;border-radius:50%;border:1.5px solid rgba(255,107,0,0.6);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;font-size:10px;color:#FF8C00;">!</div><span class="item-only">Getting so <strong>caught up in the buzz</strong> you lose control of your actions</span></div>
+          <div class="item"><div style="width:20px;height:20px;border-radius:50%;border:1.5px solid rgba(255,107,0,0.6);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;font-size:10px;color:#FF8C00;">!</div><span class="item-only">High drive making you <strong>impatient and intolerant</strong> with teammates</span></div>
+        </div>
+        <div class="cbox" style="border-color:rgba(255,107,0,0.3);background:rgba(255,107,0,0.08);"><div class="cbox-label">Counter-weight</div><div class="cbox-text">"Pause before you speak. Consider the impact before committing."</div></div>
+      </div>
+    </div>
+
+    <!-- ═══ CARD 5 — UNDER PRESSURE ═══ -->
+    <div class="card" data-index="4">
+      <svg class="bg" viewBox="0 0 375 700" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="bg5" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#120008"/><stop offset="100%" stop-color="#08000e"/></linearGradient>
+          <radialGradient id="glow5" cx="0.5" cy="0" r="0.7"><stop offset="0%" stop-color="#CC0000" stop-opacity="0.3"/><stop offset="100%" stop-color="#CC0000" stop-opacity="0"/></radialGradient>
+        </defs>
+        <rect width="375" height="700" fill="url(#bg5)"/>
+        <ellipse cx="188" cy="0" rx="280" ry="220" fill="url(#glow5)"/>
+        <polyline points="0,160 40,130 80,175 120,118 160,162 200,125 240,168 280,112 320,155 375,135" fill="none" stroke="rgba(204,0,0,0.18)" stroke-width="2"/>
+        <polyline points="0,190 40,165 80,200 120,148 160,192 200,155 240,198 280,142 320,185 375,162" fill="none" stroke="rgba(204,0,0,0.1)" stroke-width="1.5"/>
+        <rect x="0" y="0" width="4" height="700" fill="#CC0000" opacity="1"/>
+        <text x="200" y="680" font-family="Arial Black,sans-serif" font-size="180" fill="rgba(255,255,255,0.015)" font-weight="900">P</text>
+      </svg>
+      <div class="card-overlay" style="background:rgba(10,0,8,0.55)"></div>
+      <div class="card-content">
+        <div class="tag" style="color:#CC0000;opacity:1;"><span class="tag-line"></span>02 — Adapt · Pressure</div>
+        <h2>UNDER<br>PRESSURE</h2>
+        <div class="accent" style="background:#CC0000;"></div>
+        <div class="section-label">⚠ Early warning signs</div>
+        <div class="items">
+          <div class="item" style="padding:7px 0;"><div class="dot-m" style="background:#CC0000;margin-top:6px;"></div><span class="item-only" style="font-size:clamp(11.5px,3vw,13px);">Aggressively chasing results · becoming blunt &amp; dismissive</span></div>
+          <div class="item" style="padding:7px 0;"><div class="dot-m" style="background:#CC0000;margin-top:6px;"></div><span class="item-only" style="font-size:clamp(11.5px,3vw,13px);">Needlessly argumentative · insensitive to the team</span></div>
+          <div class="item" style="padding:7px 0;"><div class="dot-m" style="background:#CC0000;margin-top:6px;"></div><span class="item-only" style="font-size:clamp(11.5px,3vw,13px);">Taking chances fuelled by the buzz — losing objectivity</span></div>
+        </div>
+        <div class="section-label">→ 3-step reset</div>
+        <div class="fix-row">
+          <div class="fix-card"><div class="fix-num" style="color:rgba(255,255,255,0.35);">1</div><div class="fix-title">Contained</div><div class="fix-body">Resist the urge to act. Check what the facts actually are.</div></div>
+          <div class="fix-card"><div class="fix-num" style="color:rgba(255,255,255,0.35);">2</div><div class="fix-title">Prudent</div><div class="fix-body">What threats have I missed?</div></div>
+          <div class="fix-card"><div class="fix-num" style="color:rgba(255,255,255,0.35);">3</div><div class="fix-title">Empathic</div><div class="fix-body">Walk a mile in their shoes. How does this land with the team?</div></div>
+        </div>
+        <div class="cbox" style="margin-top:8px;border-color:rgba(204,0,0,0.3);background:rgba(204,0,0,0.1);"><div class="cbox-label">Mantra</div><div class="cbox-text">"Slow down before you speed up. The right move beats the fast move."</div></div>
+      </div>
+    </div>
+
+    <!-- ═══ CARD 6 — DECISION-MAKING ═══ -->
+    <div class="card" data-index="5">
+      <svg class="bg" viewBox="0 0 375 700" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+        <defs><linearGradient id="bg6" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#020e1e"/><stop offset="100%" stop-color="#050c18"/></linearGradient></defs>
+        <rect width="375" height="700" fill="url(#bg6)"/>
+        <circle cx="310" cy="120" r="80" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+        <circle cx="310" cy="120" r="55" fill="none" stroke="rgba(255,255,255,0.035)" stroke-width="1"/>
+        <circle cx="310" cy="120" r="30" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+        <line x1="310" y1="42" x2="310" y2="198" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+        <line x1="232" y1="120" x2="388" y2="120" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+        <line x1="255" y1="65" x2="365" y2="175" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+        <line x1="365" y1="65" x2="255" y2="175" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+        <polygon points="310,46 306,85 314,85" fill="#CC0000" opacity="0.7"/>
+        <polygon points="310,194 306,155 314,155" fill="rgba(255,255,255,0.15)"/>
+        <line x1="20" y1="350" x2="200" y2="300" stroke="rgba(255,255,255,0.04)" stroke-width="1" stroke-dasharray="8,5"/>
+        <line x1="200" y1="300" x2="350" y2="380" stroke="rgba(255,255,255,0.04)" stroke-width="1" stroke-dasharray="8,5"/>
+        <rect x="0" y="0" width="4" height="700" fill="#003087" opacity="0.9"/>
+        <rect x="0" y="120" width="4" height="55" fill="#FFD700" opacity="1"/>
+      </svg>
+      <div class="card-overlay" style="background:rgba(2,8,18,0.58)"></div>
+      <div class="card-content">
+        <div class="tag" style="color:#6699ff;opacity:1;"><span class="tag-line"></span>02 — Adapt · Decision-Making</div>
+        <h2>BEFORE<br>YOU<br>COMMIT</h2>
+        <div class="accent" style="background:#003087;"></div>
+        <div style="font-size:11px;opacity:0.5;margin-bottom:8px;font-style:italic;">Your bias: fast, optimistic, action-first. Counter it.</div>
+        <div class="items">
+          <div class="item"><div style="font-size:14px;flex-shrink:0;opacity:0.8;margin-top:1px;">?</div><span class="item-only">"How might <strong>others feel</strong> about this decision?"</span></div>
+          <div class="item"><div style="font-size:14px;flex-shrink:0;opacity:0.8;margin-top:1px;">?</div><span class="item-only">"What have I <strong>dismissed</strong> because it disagrees with me?"</span></div>
+          <div class="item"><div style="font-size:14px;flex-shrink:0;opacity:0.8;margin-top:1px;">?</div><span class="item-only">"What are the <strong>unintended consequences</strong> here?"</span></div>
+          <div class="item"><div style="font-size:14px;flex-shrink:0;opacity:0.8;margin-top:1px;">?</div><span class="item-only">"What do I <strong>definitely not</strong> want to happen?"</span></div>
+          <div class="item"><div style="font-size:14px;flex-shrink:0;opacity:0.8;margin-top:1px;">?</div><span class="item-only">"Have I <strong>fully expanded</strong> the options — or confirmed my first instinct?"</span></div>
+        </div>
+        <div class="cbox" style="background:rgba(0,48,135,0.15);border-color:rgba(0,80,200,0.3);"><div class="cbox-label">Empty Chair — ask yourself</div><div class="cbox-text">"What would an empathic, cautious perspective see that I'm missing?"</div></div>
+      </div>
+    </div>
+
+    <!-- ═══ CARD 7 — ENERGY ═══ -->
+    <div class="card" data-index="6">
+      <svg class="bg" viewBox="0 0 375 700" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="bg7" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#031412"/><stop offset="100%" stop-color="#040e10"/></linearGradient>
+          <linearGradient id="wave7" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0d4040" stop-opacity="0.6"/><stop offset="100%" stop-color="#041820" stop-opacity="0.9"/></linearGradient>
+        </defs>
+        <rect width="375" height="700" fill="url(#bg7)"/>
+        <path d="M 0 400 Q 60 370 120 400 Q 180 430 240 400 Q 300 370 375 400 L 375 700 L 0 700 Z" fill="url(#wave7)" opacity="0.4"/>
+        <path d="M 0 450 Q 80 420 155 455 Q 230 488 310 455 Q 345 438 375 450 L 375 700 L 0 700 Z" fill="#051e22" opacity="0.6"/>
+        <path d="M 0 500 Q 70 478 140 505 Q 210 530 280 500 Q 330 478 375 500 L 375 700 L 0 700 Z" fill="#04161a" opacity="0.8"/>
+        <polygon points="220,50 195,155 218,155 188,265 240,130 215,130 248,50" fill="rgba(0,200,160,0.12)"/>
+        <path d="M 0 400 Q 60 370 120 400 Q 180 430 240 400 Q 300 370 375 400" fill="none" stroke="rgba(0,210,180,0.15)" stroke-width="1.5"/>
+        <path d="M 0 450 Q 80 420 155 455 Q 230 488 310 455 Q 345 438 375 450" fill="none" stroke="rgba(0,180,150,0.1)" stroke-width="1"/>
+        <rect x="0" y="0" width="4" height="700" fill="#00a878" opacity="0.9"/>
+        <rect x="0" y="180" width="4" height="45" fill="#FFD700" opacity="1"/>
+      </svg>
+      <div class="card-overlay" style="background:rgba(3,10,14,0.55)"></div>
+      <div class="card-content">
+        <div class="tag" style="color:#00c898;opacity:1;"><span class="tag-line"></span>03 — Perform · Energy</div>
+        <h2>ENERGY<br>MANAGEMENT</h2>
+        <div class="accent" style="background:#00a878;"></div>
+        <div class="section-label">What drains you</div>
+        <div class="items" style="margin-bottom:4px;">
+          <div class="item" style="padding:6px 0;"><div class="dot-m" style="background:#CC0000;margin-top:6px;"></div><span class="item-only" style="font-size:clamp(11.5px,3vw,13px);">Doubters, cynics, negativity · timid or unadventurous strategies</span></div>
+          <div class="item" style="padding:6px 0;"><div class="dot-m" style="background:#CC0000;margin-top:6px;"></div><span class="item-only" style="font-size:clamp(11.5px,3vw,13px);">Lack of autonomy · unnecessary or irrelevant meetings</span></div>
+        </div>
+        <div class="section-label">Recharge (short-term)</div>
+        <div class="items" style="margin-bottom:4px;">
+          <div class="item" style="padding:6px 0;"><div class="dot-m" style="background:#00c898;margin-top:6px;"></div><span class="item-only" style="font-size:clamp(11.5px,3vw,13px);">Reconnect with your goals &amp; motivations</span></div>
+          <div class="item" style="padding:6px 0;"><div class="dot-m" style="background:#00c898;margin-top:6px;"></div><span class="item-only" style="font-size:clamp(11.5px,3vw,13px);">Review recent wins — remind yourself what's working</span></div>
+          <div class="item" style="padding:6px 0;"><div class="dot-m" style="background:#00c898;margin-top:6px;"></div><span class="item-only" style="font-size:clamp(11.5px,3vw,13px);">Set a short competitive challenge to tap into your drive</span></div>
+        </div>
+        <div class="section-label">Expand (long-term)</div>
+        <div class="items">
+          <div class="item" style="padding:6px 0;"><div class="dot-m" style="background:#FFD700;margin-top:6px;"></div><span class="item-only" style="font-size:clamp(11.5px,3vw,13px);">Reflect — journal it, debrief it, slow it down</span></div>
+          <div class="item" style="padding:6px 0;"><div class="dot-m" style="background:#FFD700;margin-top:6px;"></div><span class="item-only" style="font-size:clamp(11.5px,3vw,13px);">Reconnect with nature — the ocean, the boat, what it means</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ CARD 8 — CONFIDENCE ═══ -->
+    <div class="card" data-index="7">
+      <svg class="bg" viewBox="0 0 375 700" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="bg8" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0e0800"/><stop offset="100%" stop-color="#0a0c06"/></linearGradient>
+          <radialGradient id="goldenGlow" cx="0.5" cy="0.3" r="0.6"><stop offset="0%" stop-color="#FFD700" stop-opacity="0.2"/><stop offset="100%" stop-color="#FFD700" stop-opacity="0"/></radialGradient>
+        </defs>
+        <rect width="375" height="700" fill="url(#bg8)"/>
+        <ellipse cx="188" cy="0" rx="300" ry="220" fill="url(#goldenGlow)"/>
+        <circle cx="50" cy="80" r="1.3" fill="#FFD700" opacity="0.5"/><circle cx="110" cy="50" r="1.0" fill="white" opacity="0.6"/><circle cx="180" cy="35" r="1.5" fill="#FFD700" opacity="0.45"/><circle cx="240" cy="65" r="0.9" fill="white" opacity="0.55"/><circle cx="308" cy="42" r="1.2" fill="#FFD700" opacity="0.5"/><circle cx="355" cy="90" r="1.0" fill="white" opacity="0.4"/><circle cx="75" cy="130" r="0.8" fill="white" opacity="0.35"/><circle cx="340" cy="110" r="0.9" fill="#FFD700" opacity="0.4"/>
+        <path d="M 285 50 L 345 50 L 345 100 Q 345 130 315 145 Q 285 130 285 100 Z" fill="none" stroke="rgba(255,215,0,0.15)" stroke-width="1.5"/>
+        <path d="M 295 58 L 335 58 L 335 98 Q 335 122 315 133 Q 295 122 295 98 Z" fill="none" stroke="rgba(255,215,0,0.1)" stroke-width="1"/>
+        <rect x="0" y="0" width="4" height="700" fill="#FFD700" opacity="0.9"/>
+        <rect x="0" y="300" width="4" height="55" fill="#CC0000" opacity="1"/>
+      </svg>
+      <div class="card-overlay" style="background:rgba(8,5,0,0.58)"></div>
+      <div class="card-content">
+        <div class="tag" style="color:#FFD700;opacity:1;"><span class="tag-line"></span>03 — Perform · Confidence</div>
+        <h2 style="color:#FFD700;">YOUR<br>CONFIDENCE</h2>
+        <div class="accent" style="background:#FFD700;"></div>
+        <div class="voice-box">
+          <div class="voice-small">Your inner voice may say</div>
+          <div class="voice-text">"What if I don't succeed?"</div>
+        </div>
+        <div class="cbox" style="background:rgba(255,215,0,0.08);border-color:rgba(255,215,0,0.3);margin-bottom:8px;">
+          <div class="cbox-label">Remember this</div>
+          <div class="cbox-text">"True confidence is not the absence of doubt — it's <strong>committing to action despite it.</strong>"</div>
+        </div>
+        <div class="section-label">Your confidence sources</div>
+        <div class="items">
+          <div class="item" style="padding:7px 0;"><div class="dot-m" style="background:#FFD700;margin-top:6px;"></div><span class="item-only" style="font-size:clamp(11.5px,3vw,13px);">Knowing your long-term ambitions are on track</span></div>
+          <div class="item" style="padding:7px 0;"><div class="dot-m" style="background:#FFD700;margin-top:6px;"></div><span class="item-only" style="font-size:clamp(11.5px,3vw,13px);">Playing to your strengths — knowing you can rely on them</span></div>
+          <div class="item" style="padding:7px 0;"><div class="dot-m" style="background:#FFD700;margin-top:6px;"></div><span class="item-only" style="font-size:clamp(11.5px,3vw,13px);">Having put in the hard graft — the preparation is done</span></div>
+          <div class="item" style="padding:7px 0;"><div class="dot-m" style="background:#FFD700;margin-top:6px;"></div><span class="item-only" style="font-size:clamp(11.5px,3vw,13px);">Positive affirmations &amp; being valued for your contribution</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /deck -->
+
+  <!-- Bottom navigation -->
+  <div class="nav">
+    <div class="dots" id="dots"></div>
+    <div class="nav-btns">
+      <div class="nbtn" id="btnPrev">←</div>
+      <div class="nbtn" id="btnNext">→</div>
+    </div>
+  </div>
+</div><!-- /app -->
+
+<script>
+  // ── Service Worker registration (for offline use) ──────────────
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('primer_sw.js').catch(() => {});
+  }
+
+  // ── Card navigation ────────────────────────────────────────────
+  const cards = Array.from(document.querySelectorAll('.card'));
+  const dotsEl = document.getElementById('dots');
+  let current = 0, isAnimating = false;
+
+  cards.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot-nav' + (i === 0 ? ' active' : '');
+    d.addEventListener('click', () => goTo(i));
+    dotsEl.appendChild(d);
+  });
+
+  function updateDots() {
+    document.querySelectorAll('.dot-nav').forEach((d,i) => d.classList.toggle('active', i === current));
+  }
+
+  function goTo(n) {
+    if (isAnimating || n === current || n < 0 || n >= cards.length) return;
+    isAnimating = true;
+    cards[current].classList.remove('active');
+    cards[current].classList.add('exit-left');
+    const outgoing = cards[current];
+    setTimeout(() => outgoing.classList.remove('exit-left'), 320);
+    current = n;
+    cards[current].classList.add('active');
+    updateDots();
+    setTimeout(() => isAnimating = false, 400);
+  }
+
+  document.getElementById('btnPrev').addEventListener('click', () => goTo(current - 1));
+  document.getElementById('btnNext').addEventListener('click', () => goTo(current + 1));
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') goTo(current + 1);
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   goTo(current - 1);
+  });
+
+  // Touch / swipe
+  let tX = 0, tY = 0;
+  const deck = document.getElementById('deck');
+  deck.addEventListener('touchstart', e => { tX = e.touches[0].clientX; tY = e.touches[0].clientY; }, { passive: true });
+  deck.addEventListener('touchend',   e => {
+    const dx = tX - e.changedTouches[0].clientX;
+    const dy = Math.abs(tY - e.changedTouches[0].clientY);
+    if (Math.abs(dx) > 40 && dy < 80) goTo(current + (dx > 0 ? 1 : -1));
+  }, { passive: true });
+
+  // Mouse drag (desktop)
+  let mX = 0, dragging = false;
+  deck.addEventListener('mousedown', e => { mX = e.clientX; dragging = true; });
+  deck.addEventListener('mouseup',   e => { if (!dragging) return; dragging = false; const dx = mX - e.clientX; if (Math.abs(dx) > 50) goTo(current + (dx > 0 ? 1 : -1)); });
+  deck.addEventListener('mouseleave', () => dragging = false);
+</script>
+</body>
+</html>
